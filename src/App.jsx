@@ -109,7 +109,8 @@ const App = () => {
   };
 
   // Utilities for API keys
-  const activeApiKey = apiKeys.find(k => k.id === activeKeyId)?.key || '';
+  // Use user-selected key first, then fall back to built-in key
+  const activeApiKey = (apiKeys.find(k => k.id === activeKeyId)?.key) || apiKey;
   const persistKeys = (keys, activeId = activeKeyId) => {
     setApiKeys(keys);
     setActiveKeyId(activeId);
