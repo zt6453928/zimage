@@ -272,8 +272,8 @@ const App = () => {
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">AI 创意绘图工作台</h1>
-              <p className="text-slate-400 text-xs">Based on Gitee AI (z-image-turbo)</p>
+              <h1 className="text-xl font-bold text-white tracking-tight">Free for art</h1>
+              <p className="text-slate-400 text-xs">AI Image Generator</p>
             </div>
           </div>
 
