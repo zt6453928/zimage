@@ -31,7 +31,7 @@ const Tooltip = ({ text }) => (
 
 const App = () => {
   // Configuration State
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState('V5PWW7GYB8NOTZGQ6EEF4IJL3TIGXJF3YU2L371P'); // Built-in API key
   const [showSettings, setShowSettings] = useState(false);
   // Multi API Keys
   const [apiKeys, setApiKeys] = useState([]); // [{id, name, key}]
