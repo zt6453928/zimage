@@ -150,7 +150,6 @@ const App = () => {
     const payload = {
       model: 'z-image-turbo',
       prompt: prompt,
-      size: `${width}x${height}`,
       num_images_per_prompt: 1,
       num_inference_steps: steps,
     };
@@ -163,13 +162,16 @@ const App = () => {
       payload.seed = parseInt(seed);
     }
 
-    // Add ControlNet parameters if enabled
+    // Add ControlNet parameters if enabled (size not supported with ControlNet)
     if (controlNetEnabled && controlImage) {
       payload.control_image = controlImage.base64;
       payload.control_mode = controlMode;
       payload.control_context_scale = controlContextScale;
       payload.image_scale = imageScale;
       payload.guidance_scale = guidanceScale;
+    } else {
+      // Only add size when ControlNet is not enabled
+      payload.size = `${width}x${height}`;
     }
 
     const response = await fetch("https://ai.gitee.com/v1/images/generations", {
