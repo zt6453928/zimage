@@ -277,25 +277,25 @@ const App = () => {
   };
 
   return (
-    <div className="h-screen bg-slate-950 text-slate-200 flex flex-col">
+    <div className="h-screen bg-gray-50 text-gray-800 flex flex-col">
       {/* Header */}
-      <header className="flex-shrink-0 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
+      <header className="flex-shrink-0 border-b border-gray-200 bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-lg">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-white">Free for art</span>
+            <span className="font-bold text-gray-900">Free for art</span>
           </div>
 
           {/* Mode Tabs */}
-          <div className="flex bg-slate-800 rounded-lg p-1">
+          <div className="flex bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setMode('text2img')}
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
                 mode === 'text2img'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               文生图
@@ -304,8 +304,8 @@ const App = () => {
               onClick={() => setMode('img2img')}
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
                 mode === 'img2img'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               图生图
@@ -315,7 +315,7 @@ const App = () => {
           {/* Clear button */}
           <button
             onClick={clearChat}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             title="清空对话"
           >
             <Trash2 className="w-5 h-5" />
@@ -326,22 +326,22 @@ const App = () => {
       {/* Chat Area */}
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto bg-gray-50"
       >
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
           {currentMessages.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-              <div className="w-20 h-20 bg-slate-800/50 rounded-2xl flex items-center justify-center mb-4 border border-slate-700">
+              <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-4 border border-gray-200 shadow-sm">
                 {mode === 'text2img' ? (
-                  <Sparkles className="w-10 h-10 text-indigo-400" />
+                  <Sparkles className="w-10 h-10 text-indigo-500" />
                 ) : (
-                  <ImagePlus className="w-10 h-10 text-indigo-400" />
+                  <ImagePlus className="w-10 h-10 text-indigo-500" />
                 )}
               </div>
-              <h2 className="text-xl font-semibold text-white mb-2">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 {mode === 'text2img' ? '文生图' : '图生图'}
               </h2>
-              <p className="text-slate-400 text-sm max-w-md">
+              <p className="text-gray-500 text-sm max-w-md">
                 {mode === 'text2img'
                   ? '输入提示词，AI 将为你生成精美图片'
                   : '上传参考图片，输入提示词进行图像编辑'}
@@ -360,19 +360,19 @@ const App = () => {
                           key={idx}
                           src={img.preview}
                           alt={`uploaded ${idx}`}
-                          className="w-20 h-20 object-cover rounded-lg border border-slate-700"
+                          className="w-20 h-20 object-cover rounded-lg border border-gray-200 shadow-sm"
                         />
                       ))}
                     </div>
                   )}
                   {msg.text && (
-                    <div className="bg-indigo-600 text-white px-4 py-2 rounded-2xl rounded-br-md">
+                    <div className="bg-indigo-600 text-white px-4 py-2 rounded-2xl rounded-br-md shadow-sm">
                       <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
                     </div>
                   )}
                 </div>
               ) : msg.type === 'error' ? (
-                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl rounded-bl-md max-w-[80%]">
+                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl rounded-bl-md max-w-[80%]">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
                     <p className="text-sm">{msg.text}</p>
@@ -404,10 +404,10 @@ const App = () => {
           {/* Loading indicator */}
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-slate-800 px-6 py-4 rounded-2xl rounded-bl-md">
+              <div className="bg-white border border-gray-200 px-6 py-4 rounded-2xl rounded-bl-md shadow-sm">
                 <div className="flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
-                  <span className="text-sm text-slate-300">图片生成中...</span>
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                  <span className="text-sm text-gray-600">图片生成中...</span>
                 </div>
               </div>
             </div>
@@ -416,13 +416,13 @@ const App = () => {
       </div>
 
       {/* Bottom Input Area */}
-      <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/80 backdrop-blur-sm">
+      <div className="flex-shrink-0 border-t border-gray-200 bg-white">
         <div className="max-w-4xl mx-auto px-4 py-3">
           {/* Error message */}
           {error && (
-            <div className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center justify-between">
+            <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center justify-between">
               <span>{error}</span>
-              <button onClick={() => setError(null)} className="p-1 hover:bg-red-500/20 rounded">
+              <button onClick={() => setError(null)} className="p-1 hover:bg-red-100 rounded">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -436,7 +436,7 @@ const App = () => {
                   <img
                     src={img.preview}
                     alt={img.name}
-                    className="w-16 h-16 object-cover rounded-lg border border-slate-700"
+                    className="w-16 h-16 object-cover rounded-lg border border-gray-200"
                   />
                   <button
                     onClick={() => removeUploadedImage(img.id)}
@@ -456,7 +456,7 @@ const App = () => {
               <select
                 value={sizePreset}
                 onChange={(e) => setSizePreset(e.target.value)}
-                className="appearance-none bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 pr-8 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className="appearance-none bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
               >
                 {sizePresets.map(preset => (
                   <option key={preset.value} value={preset.value}>
@@ -464,7 +464,7 @@ const App = () => {
                   </option>
                 ))}
               </select>
-              <Ratio className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+              <Ratio className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>
 
             {/* Parameters toggle */}
@@ -473,7 +473,7 @@ const App = () => {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
                 showParams
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700'
+                  : 'bg-gray-100 border border-gray-200 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <SlidersHorizontal className="w-4 h-4" />
@@ -483,7 +483,7 @@ const App = () => {
             {/* Random seed button */}
             <button
               onClick={() => setSeed(String(generateRandomSeed()))}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               <span>随机种子</span>
@@ -492,32 +492,32 @@ const App = () => {
 
           {/* Expanded parameters */}
           {showParams && (
-            <div className="mb-3 p-3 bg-slate-800/50 border border-slate-700 rounded-xl space-y-3">
+            <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">负面提示词</label>
+                  <label className="text-xs text-gray-500 mb-1 block">负面提示词</label>
                   <input
                     type="text"
                     value={negativePrompt}
                     onChange={(e) => setNegativePrompt(e.target.value)}
                     placeholder="Low quality, blurry..."
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">Seed</label>
+                  <label className="text-xs text-gray-500 mb-1 block">Seed</label>
                   <input
                     type="number"
                     value={seed}
                     onChange={(e) => setSeed(e.target.value)}
                     placeholder="随机"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">
+                  <label className="text-xs text-gray-500 mb-1 block">
                     Steps: {mode === 'text2img' ? steps : img2imgSteps}
                   </label>
                   <input
@@ -526,12 +526,12 @@ const App = () => {
                     max={mode === 'text2img' ? 50 : 100}
                     value={mode === 'text2img' ? steps : img2imgSteps}
                     onChange={(e) => mode === 'text2img' ? setSteps(Number(e.target.value)) : setImg2imgSteps(Number(e.target.value))}
-                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                   />
                 </div>
                 {mode === 'img2img' && (
                   <div>
-                    <label className="text-xs text-slate-400 mb-1 block">CFG: {cfg}</label>
+                    <label className="text-xs text-gray-500 mb-1 block">CFG: {cfg}</label>
                     <input
                       type="range"
                       min="0.1"
@@ -539,7 +539,7 @@ const App = () => {
                       step="0.1"
                       value={cfg}
                       onChange={(e) => setCfg(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
                     />
                   </div>
                 )}
@@ -548,8 +548,8 @@ const App = () => {
           )}
 
           {/* Input row */}
-          <div className="flex items-end gap-2">
-            {/* Upload button */}
+          <div className="flex items-center gap-2">
+            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -558,12 +558,6 @@ const App = () => {
               onChange={handleFileSelect}
               className="hidden"
             />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-shrink-0 p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
 
             {/* Text input */}
             <div className="flex-1 relative">
@@ -573,10 +567,20 @@ const App = () => {
                 onKeyPress={handleKeyPress}
                 placeholder={mode === 'text2img' ? '输入提示词描述你想要的图片...' : '输入提示词描述你想要的编辑效果...'}
                 rows={1}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 style={{ minHeight: '48px', maxHeight: '120px' }}
               />
             </div>
+
+            {/* Upload button - only show in img2img mode */}
+            {mode === 'img2img' && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-shrink-0 p-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            )}
 
             {/* Send button */}
             <button
@@ -584,7 +588,7 @@ const App = () => {
               disabled={loading || (mode === 'text2img' && !inputText.trim()) || (mode === 'img2img' && uploadedImages.length === 0)}
               className={`flex-shrink-0 p-3 rounded-xl transition-all ${
                 loading || (mode === 'text2img' && !inputText.trim()) || (mode === 'img2img' && uploadedImages.length === 0)
-                  ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-indigo-600 text-white hover:bg-indigo-500'
               }`}
             >
