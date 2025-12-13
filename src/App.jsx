@@ -53,11 +53,14 @@ const App = () => {
 
   // Size presets
   const sizePresets = [
+    { value: '512x512', label: '1:1', desc: '512×512' },
     { value: '1024x1024', label: '1:1', desc: '1024×1024' },
-    { value: '1152x896', label: '4:3', desc: '1152×896' },
-    { value: '896x1152', label: '3:4', desc: '896×1152' },
+    { value: '1024x768', label: '4:3', desc: '1024×768' },
+    { value: '768x1024', label: '3:4', desc: '768×1024' },
     { value: '1024x576', label: '16:9', desc: '1024×576' },
     { value: '576x1024', label: '9:16', desc: '576×1024' },
+    { value: '1024x640', label: '3:2', desc: '1024×640' },
+    { value: '640x1024', label: '2:3', desc: '640×1024' },
   ];
 
   // Get current messages based on mode
