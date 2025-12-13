@@ -3,441 +3,238 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Image as ImageIcon,
   Download,
-  Settings,
   Sparkles,
   AlertCircle,
   Loader2,
-  Copy,
-  Check,
-  HelpCircle,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-  Maximize2,
-  Upload,
+  Plus,
+  Send,
   X,
   ImagePlus,
-  RefreshCw
+  RefreshCw,
+  Ratio,
+  SlidersHorizontal,
+  Trash2
 } from 'lucide-react';
 
 // SiliconFlow API Key for img2img
 const SILICONFLOW_API_KEY = 'sk-vodfbtutaebnpafuucaouxjigetlgjqknskcatpgsskgsgum';
 
-const Tooltip = ({ text }) => (
-  <div className="group relative inline-block ml-1">
-    <HelpCircle className="w-4 h-4 text-slate-500 cursor-help" />
-    <div className="invisible group-hover:visible absolute z-10 w-48 bg-slate-800 text-slate-200 text-xs rounded p-2 bottom-full left-1/2 -translate-x-1/2 mb-2 shadow-lg border border-slate-700">
-      {text}
-      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-    </div>
-  </div>
-);
+// Built-in API key for text2img
+const DEFAULT_API_KEY = 'V5PWW7GYB8NOTZGQ6EEF4IJL3TIGXJF3YU2L371P';
 
-// Image Upload Component with drag & drop
-const ImageUploader = ({ image, setImage, label, required = false }) => {
-  const [isDragging, setIsDragging] = useState(false);
+const App = () => {
+  // Mode State
+  const [mode, setMode] = useState('text2img');
+
+  // Chat messages for each mode
+  const [text2imgMessages, setText2imgMessages] = useState([]);
+  const [img2imgMessages, setImg2imgMessages] = useState([]);
+
+  // Input state
+  const [inputText, setInputText] = useState('');
+  const [uploadedImages, setUploadedImages] = useState([]);
+
+  // Parameters
+  const [sizePreset, setSizePreset] = useState('1024x1024');
+  const [showParams, setShowParams] = useState(false);
+  const [negativePrompt, setNegativePrompt] = useState('');
+  const [steps, setSteps] = useState(9);
+  const [seed, setSeed] = useState('');
+  const [cfg, setCfg] = useState(4.0);
+  const [img2imgSteps, setImg2imgSteps] = useState(20);
+
+  // UI State
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Refs
   const fileInputRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
+  // Size presets
+  const sizePresets = [
+    { value: '1024x1024', label: '1:1', desc: '1024×1024' },
+    { value: '1152x896', label: '4:3', desc: '1152×896' },
+    { value: '896x1152', label: '3:4', desc: '896×1152' },
+    { value: '1024x576', label: '16:9', desc: '1024×576' },
+    { value: '576x1024', label: '9:16', desc: '576×1024' },
+  ];
 
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
+  // Get current messages based on mode
+  const currentMessages = mode === 'text2img' ? text2imgMessages : img2imgMessages;
+  const setCurrentMessages = mode === 'text2img' ? setText2imgMessages : setImg2imgMessages;
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      processFile(file);
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  };
+  }, [currentMessages, loading]);
 
+  // Handle file upload
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      processFile(file);
-    }
-  };
-
-  const processFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setImage({
-        file: file,
-        preview: e.target.result,
-        base64: e.target.result, // Full data URL for API
-        name: file.name
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removeImage = () => {
-    setImage(null);
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setUploadedImages(prev => [...prev, {
+            id: Date.now() + Math.random(),
+            file: file,
+            preview: e.target.result,
+            base64: e.target.result,
+            name: file.name
+          }]);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  return (
-    <div className="space-y-2">
-      <label className="text-xs font-semibold text-slate-400 flex items-center">
-        {label} {required && <span className="text-red-400 ml-1">*</span>}
-        <Tooltip text="拖拽图片到此处或点击选择文件" />
-      </label>
-      <div
-        className={`relative border-2 border-dashed rounded-xl transition-all cursor-pointer overflow-hidden ${
-          isDragging
-            ? 'border-indigo-500 bg-indigo-500/10'
-            : image
-            ? 'border-slate-600 bg-slate-900/50'
-            : 'border-slate-700 hover:border-slate-600 bg-slate-950'
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => !image && fileInputRef.current?.click()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-
-        {image ? (
-          <div className="relative aspect-square">
-            <img
-              src={image.preview}
-              alt="Preview"
-              className="w-full h-full object-contain bg-slate-950"
-            />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                removeImage();
-              }}
-              className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-full transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-              <p className="text-xs text-slate-300 truncate">{image.name}</p>
-            </div>
-          </div>
-        ) : (
-          <div className="aspect-square flex flex-col items-center justify-center p-4 text-center">
-            <Upload className={`w-8 h-8 mb-2 ${isDragging ? 'text-indigo-400' : 'text-slate-500'}`} />
-            <p className="text-xs text-slate-400">拖拽文件到此处</p>
-            <p className="text-xs text-slate-500">或点击选择文件</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const App = () => {
-  // Mode State
-  const [mode, setMode] = useState('text2img'); // 'text2img' or 'img2img'
-
-  // Configuration State
-  const [apiKey, setApiKey] = useState('V5PWW7GYB8NOTZGQ6EEF4IJL3TIGXJF3YU2L371P'); // Built-in API key for text2img
-  const [showSettings, setShowSettings] = useState(false);
-  // Multi API Keys
-  const [apiKeys, setApiKeys] = useState([]); // [{id, name, key}]
-  const [activeKeyId, setActiveKeyId] = useState('');
-  const [newKeyName, setNewKeyName] = useState('');
-  const [newKeyValue, setNewKeyValue] = useState('');
-
-  // Text2Img Parameters
-  const [prompt, setPrompt] = useState(''); // No default prompt
-  const [negativePrompt, setNegativePrompt] = useState('');
-  const [model, setModel] = useState('z-image-turbo');
-
-  // img2img Parameters (SiliconFlow Qwen-Image-Edit-2509)
-  const [img2imgPrompt, setImg2imgPrompt] = useState('');
-  const [sourceImage, setSourceImage] = useState(null);
-  const [sourceImage2, setSourceImage2] = useState(null);
-  const [sourceImage3, setSourceImage3] = useState(null);
-  const [img2imgModel] = useState('Qwen/Qwen-Image-Edit-2509');
-  const [cfg, setCfg] = useState(4.0);
-  const [img2imgSteps, setImg2imgSteps] = useState(20);
-  const [img2imgSeed, setImg2imgSeed] = useState('');
-  const [img2imgNegativePrompt, setImg2imgNegativePrompt] = useState('');
-
-  // Advanced Params
-  const [sizePreset, setSizePreset] = useState('1024x1024');
-  const [width, setWidth] = useState(1024);
-  const [height, setHeight] = useState(1024);
-  const [numImages, setNumImages] = useState(1);
-  const [steps, setSteps] = useState(9);
-  const [seed, setSeed] = useState('');
-
-  // UI State
-  const [loading, setLoading] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState([]);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [error, setError] = useState(null);
-  const [copied, setCopied] = useState(false);
-  const [paramsOpen, setParamsOpen] = useState(true);
-
-  // Load API Key
-  useEffect(() => {
-    try {
-      const listRaw = localStorage.getItem('gitee_api_keys');
-      const activeId = localStorage.getItem('gitee_active_api_key_id') || '';
-      let parsed = [];
-      if (listRaw) {
-        parsed = JSON.parse(listRaw) || [];
-      } else {
-        const legacy = localStorage.getItem('gitee_api_key');
-        if (legacy) {
-          const id = `k_${Date.now()}`;
-          parsed = [{ id, name: '默认 Key', key: legacy }];
-          localStorage.setItem('gitee_api_keys', JSON.stringify(parsed));
-          localStorage.removeItem('gitee_api_key');
-          if (!activeId) localStorage.setItem('gitee_active_api_key_id', id);
-        }
-      }
-      setApiKeys(parsed);
-      setActiveKeyId(activeId || (parsed[0]?.id || ''));
-      if (parsed.length > 0) {
-        setApiKey(parsed.find(k => k.id === (activeId || parsed[0].id))?.key || '');
-      }
-    } catch {}
-    try {
-      if (window && window.innerWidth < 768) {
-        setParamsOpen(false);
-      }
-    } catch {}
-  }, []);
-
-  const copyToClipboard = () => {
-    const textToCopy = mode === 'text2img' ? prompt : img2imgPrompt;
-    if (!textToCopy) return;
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const activeApiKey = (apiKeys.find(k => k.id === activeKeyId)?.key) || apiKey;
-  const persistKeys = (keys, activeId = activeKeyId) => {
-    setApiKeys(keys);
-    setActiveKeyId(activeId);
-    localStorage.setItem('gitee_api_keys', JSON.stringify(keys));
-    localStorage.setItem('gitee_active_api_key_id', activeId || '');
-    setApiKey(keys.find(k => k.id === activeId)?.key || '');
-  };
-
-  const maskKey = (k) => {
-    if (!k || k.length < 8) return '••••';
-    return `${k.slice(0, 4)}••••${k.slice(-4)}`;
-  };
-
-  const addNewApiKey = () => {
-    const val = (newKeyValue || '').trim();
-    if (!val) return;
-    const name = (newKeyName || '').trim() || `Key ${apiKeys.length + 1}`;
-    const id = `k_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    const next = [...apiKeys, { id, name, key: val }];
-    persistKeys(next, activeKeyId || id);
-    setNewKeyName('');
-    setNewKeyValue('');
-  };
-
-  const removeApiKey = (id) => {
-    const next = apiKeys.filter(k => k.id !== id);
-    let nextActive = activeKeyId;
-    if (activeKeyId === id) {
-      nextActive = next[0]?.id || '';
-    }
-    persistKeys(next, nextActive);
-  };
-
-  const useThisKey = (id) => {
-    if (!id) return;
-    const k = apiKeys.find(k => k.id === id);
-    if (!k) return;
-    persistKeys(apiKeys, id);
-  };
-
-  const handleSizePresetChange = (e) => {
-    const val = e.target.value;
-    setSizePreset(val);
-    if (val !== 'custom') {
-      const [w, h] = val.split('x').map(v => parseInt(v, 10));
-      if (!isNaN(w) && !isNaN(h)) {
-        setWidth(w);
-        setHeight(h);
-      }
-    }
-  };
-
-  const handleDimensionChange = (type, val) => {
-    const num = parseInt(val) || 0;
-    if (type === 'w') setWidth(num);
-    else setHeight(num);
-    setSizePreset('custom');
+  const removeUploadedImage = (id) => {
+    setUploadedImages(prev => prev.filter(img => img.id !== id));
   };
 
   // Generate random seed
   const generateRandomSeed = () => {
-    const randomSeed = Math.floor(Math.random() * 9999999999);
-    setImg2imgSeed(String(randomSeed));
+    return Math.floor(Math.random() * 9999999999);
   };
 
-  // Text2Img Generation (Gitee AI)
-  const generateImage = async () => {
-    if (!activeApiKey) {
-      setError("请输入 API Key");
-      setShowSettings(true);
+  // Text2Img Generation
+  const generateText2Img = async (prompt) => {
+    const [width, height] = sizePreset.split('x').map(Number);
+
+    const payload = {
+      model: 'z-image-turbo',
+      prompt: prompt,
+      size: `${width}x${height}`,
+      extra_body: {
+        num_images_per_prompt: 1,
+        negative_prompt: negativePrompt || undefined,
+        num_inference_steps: steps,
+        seed: seed ? parseInt(seed) : undefined,
+      }
+    };
+
+    const response = await fetch("https://ai.gitee.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${DEFAULT_API_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || `Error ${response.status}: 请求失败`);
+    }
+
+    if (data.data && data.data.length > 0) {
+      return data.data.map(img => img.url || `data:image/jpeg;base64,${img.b64_json}`);
+    }
+    throw new Error("API 未返回任何数据");
+  };
+
+  // Img2Img Generation
+  const generateImg2Img = async (prompt, images) => {
+    const payload = {
+      model: 'Qwen/Qwen-Image-Edit-2509',
+      prompt: prompt || '',
+      image: images[0].base64,
+      num_inference_steps: img2imgSteps,
+      cfg: cfg,
+    };
+
+    if (images[1]) payload.image2 = images[1].base64;
+    if (images[2]) payload.image3 = images[2].base64;
+
+    if (seed) payload.seed = parseInt(seed);
+    if (negativePrompt) payload.negative_prompt = negativePrompt;
+
+    const response = await fetch("https://api.siliconflow.cn/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SILICONFLOW_API_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || data.message || `Error ${response.status}: 请求失败`);
+    }
+
+    if (data.images && data.images.length > 0) {
+      return data.images.map(img => img.url);
+    }
+    throw new Error("API 未返回任何数据");
+  };
+
+  // Handle send message
+  const handleSend = async () => {
+    if (mode === 'img2img' && uploadedImages.length === 0) {
+      setError("请先上传参考图片");
       return;
     }
 
+    if (!inputText.trim() && mode === 'text2img') {
+      setError("请输入提示词");
+      return;
+    }
+
+    const userMessage = {
+      id: Date.now(),
+      type: 'user',
+      text: inputText,
+      images: [...uploadedImages],
+      timestamp: new Date()
+    };
+
+    setCurrentMessages(prev => [...prev, userMessage]);
+    setInputText('');
+    setUploadedImages([]);
     setLoading(true);
     setError(null);
-    setGeneratedImages([]);
-    setCurrentImageIndex(0);
 
     try {
-      const payload = {
-        model: model,
-        prompt: prompt,
-        size: `${width}x${height}`,
-        extra_body: {
-          num_images_per_prompt: 1,
-          negative_prompt: negativePrompt || undefined,
-          num_inference_steps: steps,
-          seed: seed ? parseInt(seed) : undefined,
-        }
+      let resultImages;
+      if (mode === 'text2img') {
+        resultImages = await generateText2Img(inputText);
+      } else {
+        resultImages = await generateImg2Img(inputText, userMessage.images);
+      }
+
+      const aiMessage = {
+        id: Date.now() + 1,
+        type: 'ai',
+        images: resultImages,
+        timestamp: new Date()
       };
 
-      const response = await fetch("https://ai.gitee.com/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${activeApiKey}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || `Error ${response.status}: 请求失败`);
-      }
-
-      if (data.data && data.data.length > 0) {
-        const images = data.data.map(img => img.url || `data:image/jpeg;base64,${img.b64_json}`);
-        setGeneratedImages(images);
-      } else {
-        throw new Error("API 未返回任何数据");
-      }
-
+      setCurrentMessages(prev => [...prev, aiMessage]);
     } catch (err) {
       console.error(err);
-      setError(err.message || "生成图片时发生未知错误");
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'error',
+        text: err.message || "生成失败",
+        timestamp: new Date()
+      };
+      setCurrentMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Img2Img Generation (SiliconFlow API)
-  const generateImg2Img = async () => {
-    if (!sourceImage) {
-      setError("请上传至少一张参考图片");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setGeneratedImages([]);
-    setCurrentImageIndex(0);
-
-    try {
-      const payload = {
-        model: img2imgModel,
-        prompt: img2imgPrompt || '',
-        image: sourceImage.base64,
-        num_inference_steps: img2imgSteps,
-        cfg: cfg,
-      };
-
-      // Add optional images
-      if (sourceImage2) {
-        payload.image2 = sourceImage2.base64;
-      }
-      if (sourceImage3) {
-        payload.image3 = sourceImage3.base64;
-      }
-
-      // Add optional parameters
-      if (img2imgSeed) {
-        payload.seed = parseInt(img2imgSeed);
-      }
-      if (img2imgNegativePrompt) {
-        payload.negative_prompt = img2imgNegativePrompt;
-      }
-
-      console.log('Sending img2img request to SiliconFlow...', {
-        model: payload.model,
-        hasImage: !!payload.image,
-        hasImage2: !!payload.image2,
-        hasImage3: !!payload.image3,
-        steps: payload.num_inference_steps,
-        cfg: payload.cfg
-      });
-
-      const response = await fetch("https://api.siliconflow.cn/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${SILICONFLOW_API_KEY}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error?.message || data.message || `Error ${response.status}: 请求失败`);
-      }
-
-      console.log('SiliconFlow API Response:', data);
-
-      if (data.images && data.images.length > 0) {
-        const images = data.images.map(img => img.url);
-        setGeneratedImages(images);
-      } else {
-        throw new Error("API 未返回任何数据");
-      }
-
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "图生图时发生未知错误");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerate = () => {
-    if (mode === 'text2img') {
-      generateImage();
-    } else {
-      generateImg2Img();
-    }
-  };
-
+  // Handle download
   const handleDownload = async (url) => {
-    if (!url) return;
     try {
       if (url.startsWith('data:')) {
         const link = document.createElement('a');
@@ -463,586 +260,340 @@ const App = () => {
     }
   };
 
-  const currentImage = generatedImages[currentImageIndex];
+  // Handle key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Clear chat
+  const clearChat = () => {
+    setCurrentMessages([]);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30">
-      <div className="max-w-[1400px] mx-auto px-3 sm:px-4 py-4 sm:py-6">
-
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-4 border-b border-slate-800 pb-4">
+    <div className="h-screen bg-slate-950 text-slate-200 flex flex-col">
+      {/* Header */}
+      <header className="flex-shrink-0 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-lg shadow-lg shadow-indigo-500/20">
+            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-lg">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">Free for art</h1>
-              <p className="text-slate-400 text-xs">AI Image Generator</p>
-            </div>
+            <span className="font-bold text-white">Free for art</span>
           </div>
 
+          {/* Mode Tabs */}
+          <div className="flex bg-slate-800 rounded-lg p-1">
+            <button
+              onClick={() => setMode('text2img')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                mode === 'text2img'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              文生图
+            </button>
+            <button
+              onClick={() => setMode('img2img')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                mode === 'img2img'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              图生图
+            </button>
+          </div>
+
+          {/* Clear button */}
           <button
-            onClick={() => setShowSettings(!showSettings)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
-              !activeApiKey ? 'border-red-500/50 bg-red-500/10 text-red-200' : 'border-slate-700 bg-slate-900 hover:bg-slate-800'
-            }`}
+            onClick={clearChat}
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            title="清空对话"
           >
-            <Settings className="w-3.5 h-3.5" />
-            <span>{activeApiKey ? 'API 设置' : '配置 Key'}</span>
+            <Trash2 className="w-5 h-5" />
           </button>
-        </header>
+        </div>
+      </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:h-[calc(100vh-140px)]">
-
-          {/* Left Column: Scrollable Controls */}
-          <div className="lg:col-span-4 flex flex-col gap-4 lg:overflow-y-auto lg:pr-2 custom-scrollbar">
-
-            {/* Mode Tabs */}
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-1 flex">
-              <button
-                onClick={() => setMode('text2img')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
-                  mode === 'text2img'
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>文生图</span>
-              </button>
-              <button
-                onClick={() => setMode('img2img')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
-                  mode === 'img2img'
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <ImagePlus className="w-4 h-4" />
-                <span>图生图</span>
-              </button>
+      {/* Chat Area */}
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto"
+      >
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+          {currentMessages.length === 0 && !loading && (
+            <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+              <div className="w-20 h-20 bg-slate-800/50 rounded-2xl flex items-center justify-center mb-4 border border-slate-700">
+                {mode === 'text2img' ? (
+                  <Sparkles className="w-10 h-10 text-indigo-400" />
+                ) : (
+                  <ImagePlus className="w-10 h-10 text-indigo-400" />
+                )}
+              </div>
+              <h2 className="text-xl font-semibold text-white mb-2">
+                {mode === 'text2img' ? '文生图' : '图生图'}
+              </h2>
+              <p className="text-slate-400 text-sm max-w-md">
+                {mode === 'text2img'
+                  ? '输入提示词，AI 将为你生成精美图片'
+                  : '上传参考图片，输入提示词进行图像编辑'}
+              </p>
             </div>
+          )}
 
-            {/* Settings Panel (only for text2img) */}
-            {showSettings && mode === 'text2img' && (
-              <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-medium text-slate-300">API Keys (Gitee AI)</label>
-                  {activeApiKey ? (
-                    <span className="text-[10px] text-slate-500">当前: {maskKey(activeApiKey)}</span>
-                  ) : (
-                    <span className="text-[10px] text-red-400">未配置</span>
+          {currentMessages.map((msg) => (
+            <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.type === 'user' ? (
+                <div className="max-w-[80%] space-y-2">
+                  {msg.images && msg.images.length > 0 && (
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      {msg.images.map((img, idx) => (
+                        <img
+                          key={idx}
+                          src={img.preview}
+                          alt={`uploaded ${idx}`}
+                          className="w-20 h-20 object-cover rounded-lg border border-slate-700"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {msg.text && (
+                    <div className="bg-indigo-600 text-white px-4 py-2 rounded-2xl rounded-br-md">
+                      <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                    </div>
                   )}
                 </div>
-
-                <div className="space-y-2">
-                  {apiKeys.length > 0 ? (
-                    apiKeys.map((k) => (
-                      <div key={k.id} className={`flex items-center justify-between bg-slate-950 border rounded-lg px-3 py-2 ${k.id === activeKeyId ? 'border-indigo-500/60' : 'border-slate-700'}`}>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold text-slate-300 truncate">{k.name || '未命名 Key'}</div>
-                          <div className="text-[10px] text-slate-500">{maskKey(k.key)}</div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                          {k.id === activeKeyId ? (
-                            <span className="text-[10px] px-2 py-1 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">使用中</span>
-                          ) : (
-                            <button onClick={() => useThisKey(k.id)} className="text-xs px-2 py-1 rounded border border-slate-700 hover:bg-slate-800 text-slate-300">使用</button>
-                          )}
-                          <button onClick={() => removeApiKey(k.id)} className="text-xs px-2 py-1 rounded border border-slate-700 hover:bg-slate-800 text-slate-400">删除</button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-[12px] text-slate-500">暂无 Key，请在下方添加。</div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 gap-2">
-                  <input
-                    type="text"
-                    value={newKeyName}
-                    onChange={(e) => setNewKeyName(e.target.value)}
-                    placeholder="可选：给 Key 起个名字（如 账号A）"
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-600"
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      type="password"
-                      value={newKeyValue}
-                      onChange={(e) => setNewKeyValue(e.target.value)}
-                      placeholder="sk-..."
-                      className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-600"
-                    />
-                    <button onClick={addNewApiKey} className="px-3 py-2 text-sm rounded-lg bg-slate-200 text-slate-900 hover:bg-white font-semibold">添加</button>
+              ) : msg.type === 'error' ? (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-2xl rounded-bl-md max-w-[80%]">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    <p className="text-sm">{msg.text}</p>
                   </div>
+                </div>
+              ) : (
+                <div className="max-w-[80%] space-y-2">
+                  {msg.images && msg.images.map((url, idx) => (
+                    <div key={idx} className="relative group">
+                      <img
+                        src={url}
+                        alt={`generated ${idx}`}
+                        className="max-w-full rounded-2xl rounded-bl-md shadow-lg"
+                        style={{ maxHeight: '400px' }}
+                      />
+                      <button
+                        onClick={() => handleDownload(url)}
+                        className="absolute bottom-3 right-3 bg-black/60 hover:bg-black/80 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Download className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Loading indicator */}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-slate-800 px-6 py-4 rounded-2xl rounded-bl-md">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                  <span className="text-sm text-slate-300">图片生成中...</span>
                 </div>
               </div>
-            )}
+            </div>
+          )}
+        </div>
+      </div>
 
-            {/* Text2Img Controls */}
-            {mode === 'text2img' && (
-              <>
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm flex flex-col flex-shrink-0">
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium text-indigo-400 flex items-center gap-2">
-                      正向提示词 (Prompt)
-                    </label>
-                    <button
-                      onClick={copyToClipboard}
-                      className="text-xs text-slate-500 hover:text-white transition-colors flex items-center gap-1 bg-slate-800 px-2 py-1 rounded"
-                    >
-                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      {copied ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                  <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    className="w-full h-32 bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none scrollbar-thin scrollbar-thumb-slate-700"
-                    placeholder="请输入提示词..."
+      {/* Bottom Input Area */}
+      <div className="flex-shrink-0 border-t border-slate-800 bg-slate-900/80 backdrop-blur-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          {/* Error message */}
+          {error && (
+            <div className="mb-3 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="p-1 hover:bg-red-500/20 rounded">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Uploaded images preview */}
+          {uploadedImages.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {uploadedImages.map((img) => (
+                <div key={img.id} className="relative group">
+                  <img
+                    src={img.preview}
+                    alt={img.name}
+                    className="w-16 h-16 object-cover rounded-lg border border-slate-700"
                   />
+                  <button
+                    onClick={() => removeUploadedImage(img.id)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
+              ))}
+            </div>
+          )}
 
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-300">参数设置</h3>
-                    <button
-                      onClick={() => setParamsOpen(!paramsOpen)}
-                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-800"
-                      aria-expanded={paramsOpen}
-                    >
-                      {paramsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      {paramsOpen ? '收起' : '展开'}
-                    </button>
-                  </div>
-                  {paramsOpen && (
-                    <div className="mt-4 space-y-5">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center">
-                          Size (尺寸) <Tooltip text="选择预设尺寸" />
-                        </label>
-                        <select
-                          value={sizePreset}
-                          onChange={handleSizePresetChange}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
-                          <option value="256x256">1:1 (256*256)</option>
-                          <option value="512x512">1:1 (512*512)</option>
-                          <option value="1024x1024">1:1 (1024*1024)</option>
-                          <option value="1152x896">4:3 (1152*896)</option>
-                          <option value="768x1024">3:4 (768*1024)</option>
-                          <option value="1024x576">16:9 (1024*576)</option>
-                          <option value="576x1024">9:16 (576*1024)</option>
-                          <option value="custom">Custom (自定义)</option>
-                        </select>
-                      </div>
+          {/* Parameters row */}
+          <div className="mb-3 flex items-center gap-2 flex-wrap">
+            {/* Size selector */}
+            <div className="relative">
+              <select
+                value={sizePreset}
+                onChange={(e) => setSizePreset(e.target.value)}
+                className="appearance-none bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 pr-8 text-sm text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              >
+                {sizePresets.map(preset => (
+                  <option key={preset.value} value={preset.value}>
+                    {preset.label} ({preset.desc})
+                  </option>
+                ))}
+              </select>
+              <Ratio className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+            </div>
 
-                      <div>
-                        <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center">
-                          negative_prompt <Tooltip text="不希望画面中出现的元素" />
-                        </label>
-                        <textarea
-                          value={negativePrompt}
-                          onChange={(e) => setNegativePrompt(e.target.value)}
-                          className="w-full h-20 bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                          placeholder="Low quality, bad anatomy, blurry..."
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center">
-                            width <Tooltip text="图片宽度" />
-                          </label>
-                          <input
-                            type="number"
-                            value={width}
-                            onChange={(e) => handleDimensionChange('w', e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center">
-                            height <Tooltip text="图片高度" />
-                          </label>
-                          <input
-                            type="number"
-                            value={height}
-                            onChange={(e) => handleDimensionChange('h', e.target.value)}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between items-center mb-1.5">
-                          <label className="text-xs font-semibold text-slate-400 flex items-center">
-                            num_inference_steps <Tooltip text="去噪步数" />
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <input
-                            type="range"
-                            min="1"
-                            max="50"
-                            value={steps}
-                            onChange={(e) => setSteps(Number(e.target.value))}
-                            className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                          />
-                          <input
-                            type="number"
-                            value={steps}
-                            onChange={(e) => setSteps(Number(e.target.value))}
-                            className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center">
-                          seed <Tooltip text="随机种子" />
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="Random"
-                          value={seed}
-                          onChange={(e) => setSeed(e.target.value)}
-                          className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Img2Img Controls (SiliconFlow) */}
-            {mode === 'img2img' && (
-              <>
-                {/* Model Info */}
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-xs font-semibold text-slate-400">Model</label>
-                      <p className="text-sm text-indigo-400 font-medium mt-1">{img2imgModel}</p>
-                    </div>
-                    <div className="text-[10px] text-slate-500 bg-slate-800 px-2 py-1 rounded">SiliconFlow</div>
-                  </div>
-                </div>
-
-                {/* Image Upload Section - 3 slots */}
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm">
-                  <h3 className="text-sm font-bold text-slate-300 mb-4">参考图片</h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    <ImageUploader
-                      image={sourceImage}
-                      setImage={setSourceImage}
-                      label="Image"
-                      required={true}
-                    />
-                    <ImageUploader
-                      image={sourceImage2}
-                      setImage={setSourceImage2}
-                      label="Image 2"
-                      required={false}
-                    />
-                    <ImageUploader
-                      image={sourceImage3}
-                      setImage={setSourceImage3}
-                      label="Image 3"
-                      required={false}
-                    />
-                  </div>
-                </div>
-
-                {/* Prompt Section */}
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm flex flex-col flex-shrink-0">
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium text-indigo-400 flex items-center gap-2">
-                      提示词 (Prompt)
-                    </label>
-                    <button
-                      onClick={copyToClipboard}
-                      className="text-xs text-slate-500 hover:text-white transition-colors flex items-center gap-1 bg-slate-800 px-2 py-1 rounded"
-                    >
-                      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                      {copied ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                  <textarea
-                    value={img2imgPrompt}
-                    onChange={(e) => setImg2imgPrompt(e.target.value)}
-                    className="w-full h-24 bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none scrollbar-thin scrollbar-thumb-slate-700"
-                    placeholder="请输入提示词..."
-                  />
-                </div>
-
-                {/* Parameters Section */}
-                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-300">参数设置</h3>
-                    <button
-                      onClick={() => setParamsOpen(!paramsOpen)}
-                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-800"
-                      aria-expanded={paramsOpen}
-                    >
-                      {paramsOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      {paramsOpen ? '收起' : '展开'}
-                    </button>
-                  </div>
-                  {paramsOpen && (
-                    <div className="mt-4 space-y-5">
-
-                      {/* Seed with random button */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center">
-                          Seed <Tooltip text="随机种子 (0-9999999999)" />
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="number"
-                            value={img2imgSeed}
-                            onChange={(e) => setImg2imgSeed(e.target.value)}
-                            placeholder="留空则随机"
-                            className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                          <button
-                            onClick={generateRandomSeed}
-                            className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-                            title="生成随机种子"
-                          >
-                            <RefreshCw className="w-5 h-5 text-slate-400" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* CFG */}
-                      <div>
-                        <div className="flex justify-between items-center mb-1.5">
-                          <label className="text-xs font-semibold text-slate-400 flex items-center">
-                            cfg <Tooltip text="Classifier-free guidance (0.1-20)" />
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <input
-                            type="range"
-                            min="0.1"
-                            max="20"
-                            step="0.1"
-                            value={cfg}
-                            onChange={(e) => setCfg(Number(e.target.value))}
-                            className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                          />
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={cfg}
-                            onChange={(e) => setCfg(Number(e.target.value))}
-                            className="w-20 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Inference Steps */}
-                      <div>
-                        <div className="flex justify-between items-center mb-1.5">
-                          <label className="text-xs font-semibold text-slate-400 flex items-center">
-                            Inference Steps <Tooltip text="推理步数 (1-100)" />
-                          </label>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <input
-                            type="range"
-                            min="1"
-                            max="100"
-                            value={img2imgSteps}
-                            onChange={(e) => setImg2imgSteps(Number(e.target.value))}
-                            className="flex-1 h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                          />
-                          <input
-                            type="number"
-                            value={img2imgSteps}
-                            onChange={(e) => setImg2imgSteps(Number(e.target.value))}
-                            className="w-16 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Negative Prompt */}
-                      <div>
-                        <label className="text-xs font-semibold text-slate-400 mb-1.5 flex items-center">
-                          Negative Prompt <Tooltip text="不希望出现的元素" />
-                        </label>
-                        <textarea
-                          value={img2imgNegativePrompt}
-                          onChange={(e) => setImg2imgNegativePrompt(e.target.value)}
-                          placeholder="Low quality, blurry..."
-                          className="w-full h-20 bg-slate-950 border border-slate-700 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                        />
-                      </div>
-
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Generate Button */}
+            {/* Parameters toggle */}
             <button
-              onClick={handleGenerate}
-              disabled={loading || (mode === 'text2img' && !activeApiKey) || (mode === 'img2img' && !sourceImage)}
-              className={`w-full py-3.5 rounded-xl font-bold text-white shadow-lg shadow-indigo-900/20 transition-all transform active:scale-95 flex justify-center items-center gap-2 mt-auto ${
-                loading || (mode === 'text2img' && !activeApiKey) || (mode === 'img2img' && !sourceImage)
-                  ? 'bg-slate-800 cursor-not-allowed text-slate-500'
-                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500'
+              onClick={() => setShowParams(!showParams)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                showParams
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-800 border border-slate-700 text-slate-300 hover:bg-slate-700'
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              <span>参数</span>
+            </button>
+
+            {/* Random seed button */}
+            <button
+              onClick={() => setSeed(String(generateRandomSeed()))}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>随机种子</span>
+            </button>
+          </div>
+
+          {/* Expanded parameters */}
+          {showParams && (
+            <div className="mb-3 p-3 bg-slate-800/50 border border-slate-700 rounded-xl space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">负面提示词</label>
+                  <input
+                    type="text"
+                    value={negativePrompt}
+                    onChange={(e) => setNegativePrompt(e.target.value)}
+                    placeholder="Low quality, blurry..."
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">Seed</label>
+                  <input
+                    type="number"
+                    value={seed}
+                    onChange={(e) => setSeed(e.target.value)}
+                    placeholder="随机"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">
+                    Steps: {mode === 'text2img' ? steps : img2imgSteps}
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max={mode === 'text2img' ? 50 : 100}
+                    value={mode === 'text2img' ? steps : img2imgSteps}
+                    onChange={(e) => mode === 'text2img' ? setSteps(Number(e.target.value)) : setImg2imgSteps(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                </div>
+                {mode === 'img2img' && (
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">CFG: {cfg}</label>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="20"
+                      step="0.1"
+                      value={cfg}
+                      onChange={(e) => setCfg(Number(e.target.value))}
+                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Input row */}
+          <div className="flex items-end gap-2">
+            {/* Upload button */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-shrink-0 p-3 bg-slate-800 border border-slate-700 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+
+            {/* Text input */}
+            <div className="flex-1 relative">
+              <textarea
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={mode === 'text2img' ? '输入提示词描述你想要的图片...' : '输入提示词描述你想要的编辑效果...'}
+                rows={1}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                style={{ minHeight: '48px', maxHeight: '120px' }}
+              />
+            </div>
+
+            {/* Send button */}
+            <button
+              onClick={handleSend}
+              disabled={loading || (mode === 'text2img' && !inputText.trim()) || (mode === 'img2img' && uploadedImages.length === 0)}
+              className={`flex-shrink-0 p-3 rounded-xl transition-all ${
+                loading || (mode === 'text2img' && !inputText.trim()) || (mode === 'img2img' && uploadedImages.length === 0)
+                  ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-500'
               }`}
             >
               {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  正在生成...
-                </>
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
-                <>
-                  {mode === 'text2img' ? <Sparkles className="w-5 h-5" /> : <ImagePlus className="w-5 h-5" />}
-                  {mode === 'text2img' ? '立即生成' : '运行'}
-                </>
+                <Send className="w-5 h-5" />
               )}
             </button>
-
-          </div>
-
-          {/* Right Column: Display Canvas */}
-          <div className="lg:col-span-8 flex flex-col min-h-[300px] lg:h-full">
-            <div className="flex-1 bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group">
-
-              {/* Loading State */}
-              {loading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-slate-900/80 backdrop-blur-sm">
-                  <div className="relative">
-                    {/* Animated rings */}
-                    <div className="w-24 h-24 rounded-full border-4 border-indigo-500/20 animate-ping absolute inset-0"></div>
-                    <div className="w-24 h-24 rounded-full border-4 border-t-indigo-500 border-r-indigo-500/50 border-b-indigo-500/20 border-l-indigo-500/20 animate-spin"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Sparkles className="w-8 h-8 text-indigo-400 animate-pulse" />
-                    </div>
-                  </div>
-                  <div className="mt-6 text-center">
-                    <p className="text-lg font-semibold text-white mb-2">图片生成中...</p>
-                    <p className="text-sm text-slate-400">AI 正在创作您的图像</p>
-                    <div className="mt-4 flex items-center justify-center gap-1">
-                      <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                      <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                      <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {generatedImages.length > 0 && !loading ? (
-                <div className="relative w-full h-full flex flex-col">
-                  <div className="flex-1 flex items-center justify-center p-4 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] relative min-h-[200px]">
-                    <img
-                      src={currentImage}
-                      alt={`Generated ${currentImageIndex + 1}`}
-                      className="max-w-full max-h-[calc(100vh-250px)] rounded-lg shadow-2xl shadow-black/50 object-contain transition-all duration-300"
-                    />
-
-                    {generatedImages.length > 1 && (
-                      <>
-                        <button
-                          onClick={() => setCurrentImageIndex(prev => prev === 0 ? generatedImages.length - 1 : prev - 1)}
-                          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full backdrop-blur-sm transition-all"
-                        >
-                          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-                        </button>
-                        <button
-                          onClick={() => setCurrentImageIndex(prev => prev === generatedImages.length - 1 ? 0 : prev + 1)}
-                          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full backdrop-blur-sm transition-all"
-                        >
-                          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="bg-slate-900/80 backdrop-blur border-t border-slate-800 p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-center gap-3">
-                    <div className="flex gap-2 overflow-x-auto max-w-full sm:max-w-[60%] py-1 no-scrollbar">
-                      {generatedImages.map((img, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentImageIndex(idx)}
-                          className={`relative w-10 h-10 sm:w-12 sm:h-12 rounded overflow-hidden border-2 transition-all flex-shrink-0 ${
-                            currentImageIndex === idx ? 'border-indigo-500 scale-105' : 'border-slate-700 opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          <img src={img} className="w-full h-full object-cover" alt="thumbnail" />
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-2 sm:gap-3">
-                      <button
-                        onClick={() => window.open(currentImage, '_blank')}
-                        className="p-2 sm:p-2.5 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-                        title="在新标签页打开"
-                      >
-                        <Maximize2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDownload(currentImage)}
-                        className="bg-white text-slate-900 hover:bg-slate-200 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold shadow-lg flex items-center gap-2 transition-all transform hover:-translate-y-0.5 text-xs sm:text-sm"
-                      >
-                        <Download className="w-4 h-4" />
-                        保存图片
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : !loading && (
-                <div className="text-center p-6 sm:p-8 max-w-md">
-                  {error ? (
-                    <div className="text-red-400 bg-red-400/10 p-4 rounded-xl border border-red-400/20">
-                      <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-                      <p className="font-semibold">生成失败</p>
-                      <p className="text-xs mt-1 opacity-80 break-all">{error}</p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-800/50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-700 rotate-3 group-hover:rotate-6 transition-transform">
-                        <ImageIcon className="w-8 h-8 sm:w-10 sm:h-10 text-slate-500" />
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-medium text-slate-300 mb-2">工作区就绪</h3>
-                      <p className="text-slate-500 text-xs sm:text-sm">
-                        {mode === 'text2img'
-                          ? '在左侧面板输入提示词和参数。'
-                          : '上传参考图片，输入提示词开始编辑。\n支持最多 3 张参考图片。'
-                        }
-                      </p>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #334155;
-          border-radius: 20px;
-        }
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 };
