@@ -917,7 +917,30 @@ const App = () => {
           <div className="lg:col-span-8 flex flex-col min-h-[300px] lg:h-full">
             <div className="flex-1 bg-slate-900/30 border-2 border-dashed border-slate-800 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group">
 
-              {generatedImages.length > 0 ? (
+              {/* Loading State */}
+              {loading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-slate-900/80 backdrop-blur-sm">
+                  <div className="relative">
+                    {/* Animated rings */}
+                    <div className="w-24 h-24 rounded-full border-4 border-indigo-500/20 animate-ping absolute inset-0"></div>
+                    <div className="w-24 h-24 rounded-full border-4 border-t-indigo-500 border-r-indigo-500/50 border-b-indigo-500/20 border-l-indigo-500/20 animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Sparkles className="w-8 h-8 text-indigo-400 animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="mt-6 text-center">
+                    <p className="text-lg font-semibold text-white mb-2">图片生成中...</p>
+                    <p className="text-sm text-slate-400">AI 正在创作您的图像</p>
+                    <div className="mt-4 flex items-center justify-center gap-1">
+                      <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                      <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                      <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {generatedImages.length > 0 && !loading ? (
                 <div className="relative w-full h-full flex flex-col">
                   <div className="flex-1 flex items-center justify-center p-4 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] relative min-h-[200px]">
                     <img
@@ -977,7 +1000,7 @@ const App = () => {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : !loading && (
                 <div className="text-center p-6 sm:p-8 max-w-md">
                   {error ? (
                     <div className="text-red-400 bg-red-400/10 p-4 rounded-xl border border-red-400/20">
