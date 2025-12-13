@@ -464,7 +464,7 @@ const App = () => {
       </div>
 
       {/* Bottom Input Area */}
-      <div className="flex-shrink-0 border-t border-gray-200 bg-white">
+      <div className="flex-shrink-0 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 py-3">
           {/* Error message */}
           {error && (
