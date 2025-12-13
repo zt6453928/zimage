@@ -147,28 +147,30 @@ const App = () => {
   const generateText2Img = async (prompt) => {
     const [width, height] = sizePreset.split('x').map(Number);
 
-    const extraBody = {
-      num_images_per_prompt: 1,
-      negative_prompt: negativePrompt || undefined,
-      num_inference_steps: steps,
-      seed: seed ? parseInt(seed) : undefined,
-    };
-
-    // Add ControlNet parameters if enabled
-    if (controlNetEnabled && controlImage) {
-      extraBody.control_image = controlImage.base64;
-      extraBody.control_mode = controlMode;
-      extraBody.control_context_scale = controlContextScale;
-      extraBody.image_scale = imageScale;
-      extraBody.guidance_scale = guidanceScale;
-    }
-
     const payload = {
       model: 'z-image-turbo',
       prompt: prompt,
       size: `${width}x${height}`,
-      extra_body: extraBody
+      num_images_per_prompt: 1,
+      num_inference_steps: steps,
     };
+
+    // Add optional parameters
+    if (negativePrompt) {
+      payload.negative_prompt = negativePrompt;
+    }
+    if (seed) {
+      payload.seed = parseInt(seed);
+    }
+
+    // Add ControlNet parameters if enabled
+    if (controlNetEnabled && controlImage) {
+      payload.control_image = controlImage.base64;
+      payload.control_mode = controlMode;
+      payload.control_context_scale = controlContextScale;
+      payload.image_scale = imageScale;
+      payload.guidance_scale = guidanceScale;
+    }
 
     const response = await fetch("https://ai.gitee.com/v1/images/generations", {
       method: "POST",
