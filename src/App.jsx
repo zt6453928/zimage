@@ -43,18 +43,28 @@ const App = () => {
   const [cfg, setCfg] = useState(4.0);
   const [img2imgSteps, setImg2imgSteps] = useState(20);
 
+  // ControlNet parameters
+  const [controlNetEnabled, setControlNetEnabled] = useState(false);
+  const [controlImage, setControlImage] = useState(null);
+  const [controlMode, setControlMode] = useState('Canny');
+  const [controlContextScale, setControlContextScale] = useState(0.75);
+  const [imageScale, setImageScale] = useState(1);
+  const [guidanceScale, setGuidanceScale] = useState(1);
+
   // UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Refs
   const fileInputRef = useRef(null);
+  const controlImageInputRef = useRef(null);
   const chatContainerRef = useRef(null);
 
   // Size presets
   const sizePresets = [
     { value: '512x512', label: '1:1', desc: '512×512' },
     { value: '1024x1024', label: '1:1', desc: '1024×1024' },
+    { value: '2048x2048', label: '1:1', desc: '2048×2048' },
     { value: '1024x768', label: '4:3', desc: '1024×768' },
     { value: '768x1024', label: '3:4', desc: '768×1024' },
     { value: '1024x576', label: '16:9', desc: '1024×576' },
@@ -101,6 +111,33 @@ const App = () => {
     setUploadedImages(prev => prev.filter(img => img.id !== id));
   };
 
+  // Handle ControlNet image upload
+  const handleControlImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        // Extract base64 without the data:image/xxx;base64, prefix
+        const base64Full = e.target.result;
+        const base64Data = base64Full.split(',')[1];
+        setControlImage({
+          file: file,
+          preview: base64Full,
+          base64: base64Data,
+          name: file.name
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+    if (controlImageInputRef.current) {
+      controlImageInputRef.current.value = '';
+    }
+  };
+
+  const removeControlImage = () => {
+    setControlImage(null);
+  };
+
   // Generate random seed
   const generateRandomSeed = () => {
     return Math.floor(Math.random() * 9999999999);
@@ -110,16 +147,27 @@ const App = () => {
   const generateText2Img = async (prompt) => {
     const [width, height] = sizePreset.split('x').map(Number);
 
+    const extraBody = {
+      num_images_per_prompt: 1,
+      negative_prompt: negativePrompt || undefined,
+      num_inference_steps: steps,
+      seed: seed ? parseInt(seed) : undefined,
+    };
+
+    // Add ControlNet parameters if enabled
+    if (controlNetEnabled && controlImage) {
+      extraBody.control_image = controlImage.base64;
+      extraBody.control_mode = controlMode;
+      extraBody.control_context_scale = controlContextScale;
+      extraBody.image_scale = imageScale;
+      extraBody.guidance_scale = guidanceScale;
+    }
+
     const payload = {
       model: 'z-image-turbo',
       prompt: prompt,
       size: `${width}x${height}`,
-      extra_body: {
-        num_images_per_prompt: 1,
-        negative_prompt: negativePrompt || undefined,
-        num_inference_steps: steps,
-        seed: seed ? parseInt(seed) : undefined,
-      }
+      extra_body: extraBody
     };
 
     const response = await fetch("https://ai.gitee.com/v1/images/generations", {
@@ -544,6 +592,129 @@ const App = () => {
                   </div>
                 )}
               </div>
+
+              {/* ControlNet Section - only for text2img */}
+              {mode === 'text2img' && (
+                <div className="border-t border-gray-200 pt-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="checkbox"
+                      id="controlnet-toggle"
+                      checked={controlNetEnabled}
+                      onChange={(e) => setControlNetEnabled(e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                    />
+                    <label htmlFor="controlnet-toggle" className="text-sm font-medium text-gray-700">
+                      启用 ControlNet
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    ControlNet 可以让生成的图片与参考图保持相似的结构、边缘或姿态
+                  </p>
+
+                  {controlNetEnabled && (
+                    <div className="space-y-3">
+                      {/* Control Image Upload */}
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">control_image 参考图片</label>
+                        <input
+                          ref={controlImageInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleControlImageSelect}
+                          className="hidden"
+                        />
+                        {controlImage ? (
+                          <div className="relative inline-block">
+                            <img
+                              src={controlImage.preview}
+                              alt="control"
+                              className="w-24 h-24 object-cover rounded-lg border border-gray-200"
+                            />
+                            <button
+                              onClick={removeControlImage}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => controlImageInputRef.current?.click()}
+                            className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-indigo-400 hover:text-indigo-400 transition-colors"
+                          >
+                            <Plus className="w-6 h-6" />
+                            <span className="text-xs mt-1">上传图片</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Control Mode */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">control_mode 控制模式</label>
+                          <select
+                            value={controlMode}
+                            onChange={(e) => setControlMode(e.target.value)}
+                            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="Canny">Canny (边缘检测)</option>
+                            <option value="Depth">Depth (深度图)</option>
+                            <option value="HED">HED (软边缘)</option>
+                            <option value="MLSD">MLSD (直线检测)</option>
+                            <option value="Pose">Pose (姿态检测)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">
+                            control_context_scale: {controlContextScale}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.05"
+                            value={controlContextScale}
+                            onChange={(e) => setControlContextScale(Number(e.target.value))}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">
+                            image_scale: {imageScale}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="2"
+                            step="0.1"
+                            value={imageScale}
+                            onChange={(e) => setImageScale(Number(e.target.value))}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">
+                            guidance_scale: {guidanceScale}
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value={guidanceScale}
+                            onChange={(e) => setGuidanceScale(Number(e.target.value))}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -567,8 +738,7 @@ const App = () => {
                 onKeyPress={handleKeyPress}
                 placeholder={mode === 'text2img' ? '输入提示词描述你想要的图片...' : '输入提示词描述你想要的编辑效果...'}
                 rows={1}
-                className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                style={{ minHeight: '48px', maxHeight: '120px' }}
+                className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none h-[48px]"
               />
             </div>
 
@@ -576,7 +746,7 @@ const App = () => {
             {mode === 'img2img' && (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-shrink-0 p-3 bg-gray-100 border border-gray-200 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+                className="flex-shrink-0 w-[48px] h-[48px] flex items-center justify-center bg-gray-100 border border-gray-200 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors"
               >
                 <Plus className="w-5 h-5" />
               </button>
@@ -586,7 +756,7 @@ const App = () => {
             <button
               onClick={handleSend}
               disabled={loading || (mode === 'text2img' && !inputText.trim()) || (mode === 'img2img' && uploadedImages.length === 0)}
-              className={`flex-shrink-0 p-3 rounded-xl transition-all ${
+              className={`flex-shrink-0 w-[48px] h-[48px] flex items-center justify-center rounded-xl transition-all ${
                 loading || (mode === 'text2img' && !inputText.trim()) || (mode === 'img2img' && uploadedImages.length === 0)
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-indigo-600 text-white hover:bg-indigo-500'
